@@ -1,7 +1,7 @@
 {
   "site_name": "EcoRadar",
   "site_tagline": "Baromètre Carburants & Énergie en Temps Réel",
-  "base_url": "https://ecoradar-france.github.io/EcoRadar-Autopilot",
+  "base_url": "https://thorlan04.github.io/EcoRadar-Autopilot",
   "new_cities_per_run": 15,
   "max_cities": 1000,
   "default_search_radius_km": 12,
