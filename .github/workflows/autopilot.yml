@@ -58,9 +58,11 @@ jobs:
           if git diff --staged --quiet; then
             echo "Aucune modification de la base SQLite à committer."
           else
-            git commit -m "chore(db): mise à jour de state.db [skip ci]"
-            git push origin HEAD
+            git commit -m "chore(db): mise à jour de state.db [skip ci]" || true
+            git pull --rebase origin main || true
+            git push origin HEAD || true
           fi
+
 
       - name: ⚙️ Configuration GitHub Pages
         uses: actions/configure-pages@v5
