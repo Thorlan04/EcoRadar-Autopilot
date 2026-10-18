@@ -5,6 +5,11 @@ on:
     # Exécution automatique chaque jour à 05h30 UTC (06h30 / 07h30 heure française)
     - cron: '30 5 * * *'
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'data/state.db'
 
 permissions:
   contents: write
