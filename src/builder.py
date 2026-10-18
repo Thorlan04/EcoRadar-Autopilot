@@ -186,12 +186,25 @@ class SiteBuilder:
         # 6. Génération de l'API JSON latest.json
         self.generate_api_latest(active_cities, tempo, national_stats)
 
+        # 7. Génération de ads.txt pour AdSense
+        self.generate_ads_txt()
+
         metrics = {
             "cities_pages": len(city_slugs),
-            "total_files": len(city_slugs) + 5
+            "total_files": len(city_slugs) + 6
         }
-        log_event("BUILD_ALL", "SUCCESS", f"{metrics['cities_pages']} pages villes + index + sitemap + llms + api générés.")
+        log_event("BUILD_ALL", "SUCCESS", f"{metrics['cities_pages']} pages villes + index + sitemap + llms + api + ads.txt générés.")
         return metrics
+
+    def generate_ads_txt(self) -> None:
+        """Génère dist/ads.txt pour la certification Google AdSense."""
+        adsense_id = self.config.get("monetization", {}).get("adsense_client_id", "")
+        if adsense_id and adsense_id.startswith("ca-"):
+            clean_pub = adsense_id.replace("ca-", "")
+            content = f"google.com, {clean_pub}, DIRECT, f08c47fec0942fa0\n"
+            with open(os.path.join(DIST_DIR, "ads.txt"), "w", encoding="utf-8") as f:
+                f.write(content)
+
 
     def generate_sitemap(self, city_slugs: List[str]) -> None:
         """Génère un sitemap.xml valide aux normes Google."""

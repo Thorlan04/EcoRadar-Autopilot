@@ -14,10 +14,10 @@
   <meta property="og:title" content="{% block og_title %}EcoRadar - Comparateur Carburants & Énergie{% endblock %}">
   <meta property="og:description" content="{% block og_description %}Trouvez la station-service la moins chère et optimisez votre consommation électrique avec l'indice Tempo EDF.{% endblock %}">
 
-  <!-- Twitter -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="{% block twitter_title %}EcoRadar | Baromètre Carburants & Énergie{% endblock %}">
-  <meta name="twitter:description" content="{% block twitter_description %}Prix des carburants en direct et indice Tempo EDF.{% endblock %}">
+  <!-- Google AdSense -->
+  {% if monetization and monetization.adsense_client_id and monetization.adsense_client_id != 'ca-pub-XXXXXXXXXXXXXXXX' %}
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client={{ monetization.adsense_client_id }}" crossorigin="anonymous"></script>
+  {% endif %}
 
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>

@@ -6,7 +6,7 @@
   "max_cities": 1000,
   "default_search_radius_km": 12,
   "monetization": {
-    "adsense_client_id": "ca-pub-XXXXXXXXXXXXXXXX",
+    "adsense_client_id": "ca-pub-6097332031875042",
     "moneytizer_id": "MONEYTIZER-XXXXXXXX",
     "tollbit_token": "tb_live_XXXXXXXXXXXXXXXXXXXXXXXX",
     "custom_banner_html": "<div class=\"p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-center text-sm text-emerald-800 font-medium\"><span class=\"inline-block mr-2\">💡</span> Astuce ÉcoRadar : Anticipez vos pleins avant le week-end et profitez des jours Tempo Bleu pour recharger vos véhicules électriques à coût réduit.</div>"
