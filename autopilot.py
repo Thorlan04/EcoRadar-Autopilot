@@ -29,7 +29,22 @@ logging.basicConfig(
 logger = logging.getLogger("EcoRadar.Autopilot")
 
 
+def load_env_file() -> None:
+    env_path = os.path.join(ROOT_DIR, ".env")
+    if os.path.exists(env_path):
+        with open(env_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, val = line.split("=", 1)
+                    key = key.strip()
+                    val = val.strip().strip('"').strip("'")
+                    if key and not os.environ.get(key):
+                        os.environ[key] = val
+
+
 def load_config() -> dict:
+    load_env_file()
     config_path = os.path.join(ROOT_DIR, "config.json")
     if not os.path.exists(config_path):
         raise FileNotFoundError(f"Fichier de configuration introuvable : {config_path}")

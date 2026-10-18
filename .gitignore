@@ -21,3 +21,6 @@ dist/
 
 # Logs locaux
 *.log
+
+# Secrets d'environnement locaux
+.env
