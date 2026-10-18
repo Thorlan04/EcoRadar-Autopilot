@@ -1,0 +1,19 @@
+{
+  "site_name": "EcoRadar",
+  "site_tagline": "Baromètre Carburants & Énergie en Temps Réel",
+  "base_url": "https://ecoradar-france.github.io/EcoRadar-Autopilot",
+  "new_cities_per_run": 15,
+  "max_cities": 1000,
+  "default_search_radius_km": 12,
+  "monetization": {
+    "adsense_client_id": "ca-pub-XXXXXXXXXXXXXXXX",
+    "moneytizer_id": "MONEYTIZER-XXXXXXXX",
+    "tollbit_token": "tb_live_XXXXXXXXXXXXXXXXXXXXXXXX",
+    "custom_banner_html": "<div class=\"p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-center text-sm text-emerald-800 font-medium\"><span class=\"inline-block mr-2\">💡</span> Astuce ÉcoRadar : Anticipez vos pleins avant le week-end et profitez des jours Tempo Bleu pour recharger vos véhicules électriques à coût réduit.</div>"
+  },
+  "gemini": {
+    "model": "gemini-2.5-flash",
+    "request_delay_seconds": 4.5,
+    "max_retries": 3
+  }
+}

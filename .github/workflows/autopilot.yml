@@ -1,0 +1,70 @@
+name: EcoRadar Autopilot Daily Run
+
+on:
+  schedule:
+    # Exécution automatique chaque jour à 05h30 UTC (06h30 / 07h30 heure française)
+    - cron: '30 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: 'ecoradar-pages'
+  cancel-in-progress: false
+
+jobs:
+  autopilot:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: 📥 Récupération du code source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🐍 Configuration de Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 📦 Installation des dépendances
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 🚀 Exécution du pipeline EcoRadar-Autopilot
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python autopilot.py
+
+      - name: 💾 Sauvegarde et persistance de la base SQLite
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/state.db
+          if git diff --staged --quiet; then
+            echo "Aucune modification de la base SQLite à committer."
+          else
+            git commit -m "chore(db): mise à jour de state.db [skip ci]"
+            git push origin HEAD
+          fi
+
+      - name: ⚙️ Configuration GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: 📤 Upload de l'artéfact du site web (dist/)
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './dist'
+
+      - name: 🌐 Déploiement sur GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

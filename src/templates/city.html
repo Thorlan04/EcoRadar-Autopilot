@@ -1,0 +1,403 @@
+{% extends "base.html" %}
+
+{% block title %}Prix des Carburants à {{ city.nom }} ({{ city.codes_postaux[0] if city.codes_postaux else "" }}) en Direct | EcoRadar{% endblock %}
+{% block meta_description %}Comparez en temps réel les prix du Gazole, SP95, E10, SP98 et E85 à {{ city.nom }}. Trouvez la station la moins chère aujourd'hui et consultez la couleur Tempo EDF.{% endblock %}
+
+{% block structured_data %}
+<!-- Schema.org BreadcrumbList -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Accueil",
+      "item": "{{ base_url }}/index.html"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Prix Carburants {{ city.nom }}",
+      "item": "{{ canonical_url }}"
+    }
+  ]
+}
+</script>
+
+<!-- Schema.org FAQPage -->
+{% if summary and summary.faq %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {% for f in summary.faq %}
+    {
+      "@type": "Question",
+      "name": {{ f.question | tojson }},
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": {{ f.answer | tojson }}
+      }
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]
+}
+</script>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+  <!-- Fil d'Ariane SEO -->
+  <nav class="flex text-xs text-slate-500 mb-6" aria-label="Breadcrumb">
+    <ol class="inline-flex items-center space-x-2">
+      <li>
+        <a href="{{ base_url }}/index.html" class="hover:text-emerald-600 transition">Accueil</a>
+      </li>
+      <li><span>/</span></li>
+      <li>
+        <a href="{{ base_url }}/index.html#annuaire" class="hover:text-emerald-600 transition">Villes</a>
+      </li>
+      <li><span>/</span></li>
+      <li class="font-semibold text-slate-800" aria-current="page">{{ city.nom }}</li>
+    </ol>
+  </nav>
+
+  <!-- En-tête Ville -->
+  <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200 mb-8">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div>
+        <div class="flex flex-wrap items-center gap-2 mb-3">
+          <span class="text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-800">
+            CP {{ city.codes_postaux | join(', ') if city.codes_postaux else city.code_insee }}
+          </span>
+          {% if city.departement %}
+          <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700">
+            {{ city.departement }}
+          </span>
+          {% endif %}
+          <span class="text-xs text-slate-400">
+            {{ "{:,}".format(city.population).replace(',', ' ') }} résidents
+          </span>
+        </div>
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+          Prix des Carburants à <span class="text-emerald-600">{{ city.nom }}</span>
+        </h1>
+        <p class="text-sm sm:text-base text-slate-600 mt-2">
+          Comparateur en direct des stations-service sur un rayon de {{ radius_km }} km.
+        </p>
+      </div>
+
+      <!-- Bloc Tempo Ville -->
+      <div class="p-4 rounded-xl border flex items-center space-x-4
+        {% if tempo.couleur_today == 'BLEU' %}badge-tempo-bleu
+        {% elif tempo.couleur_today == 'BLANC' %}badge-tempo-blanc
+        {% elif tempo.couleur_today == 'ROUGE' %}badge-tempo-rouge
+        {% else %}badge-tempo-indetermine{% endif %}">
+        <div class="text-2xl">
+          {% if tempo.couleur_today == 'BLEU' %}🔵
+          {% elif tempo.couleur_today == 'BLANC' %}⚪
+          {% elif tempo.couleur_today == 'ROUGE' %}🔴
+          {% else %}⏳{% endif %}
+        </div>
+        <div>
+          <div class="text-[11px] font-bold uppercase tracking-wider opacity-75">Énergie EDF Aujourd'hui</div>
+          <div class="text-lg font-black leading-tight">Jour {{ tempo.lib_today }}</div>
+          <div class="text-[11px] mt-0.5">Demain : {{ tempo.lib_tomorrow }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Puces Synthèse Rapide -->
+    {% if summary and summary.takeaways %}
+    <div class="mt-6 pt-6 border-t border-slate-100 flex flex-wrap gap-2">
+      {% for t in summary.takeaways %}
+      <span class="inline-flex items-center text-xs font-semibold px-3 py-1 bg-slate-100 text-slate-800 rounded-lg">
+        <span class="text-emerald-600 mr-1.5">✓</span> {{ t }}
+      </span>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Cartes des Prix Moyens & Minima Locaux -->
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
+    
+    <!-- Gazole -->
+    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+      <div class="text-[11px] font-bold text-slate-400 uppercase">Gazole</div>
+      <div class="text-xl font-black text-slate-900 mt-1">
+        {{ "%.3f"|format(metrics.avg_gazole) if metrics and metrics.avg_gazole else "N/C" }} <span class="text-xs font-normal">€</span>
+      </div>
+      <div class="text-[11px] text-emerald-600 font-semibold mt-1">
+        Min: {{ "%.3f"|format(metrics.min_gazole) if metrics and metrics.min_gazole else "N/C" }} €
+      </div>
+      <div class="text-[10px] text-slate-400 mt-0.5">
+        {{ trends.gazole.text if trends and trends.gazole else "Stable" }}
+      </div>
+    </div>
+
+    <!-- SP95-E10 -->
+    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+      <div class="text-[11px] font-bold text-slate-400 uppercase">SP95-E10</div>
+      <div class="text-xl font-black text-slate-900 mt-1">
+        {{ "%.3f"|format(metrics.avg_e10) if metrics and metrics.avg_e10 else "N/C" }} <span class="text-xs font-normal">€</span>
+      </div>
+      <div class="text-[11px] text-emerald-600 font-semibold mt-1">
+        Min: {{ "%.3f"|format(metrics.min_e10) if metrics and metrics.min_e10 else "N/C" }} €
+      </div>
+      <div class="text-[10px] text-slate-400 mt-0.5">
+        {{ trends.e10.text if trends and trends.e10 else "Stable" }}
+      </div>
+    </div>
+
+    <!-- SP98 -->
+    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+      <div class="text-[11px] font-bold text-slate-400 uppercase">SP98</div>
+      <div class="text-xl font-black text-slate-900 mt-1">
+        {{ "%.3f"|format(metrics.avg_sp98) if metrics and metrics.avg_sp98 else "N/C" }} <span class="text-xs font-normal">€</span>
+      </div>
+      <div class="text-[11px] text-emerald-600 font-semibold mt-1">
+        Min: {{ "%.3f"|format(metrics.min_sp98) if metrics and metrics.min_sp98 else "N/C" }} €
+      </div>
+      <div class="text-[10px] text-slate-400 mt-0.5">
+        {{ trends.sp98.text if trends and trends.sp98 else "Stable" }}
+      </div>
+    </div>
+
+    <!-- SP95 -->
+    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+      <div class="text-[11px] font-bold text-slate-400 uppercase">SP95</div>
+      <div class="text-xl font-black text-slate-900 mt-1">
+        {{ "%.3f"|format(metrics.avg_sp95) if metrics and metrics.avg_sp95 else "N/C" }} <span class="text-xs font-normal">€</span>
+      </div>
+      <div class="text-[11px] text-emerald-600 font-semibold mt-1">
+        Min: {{ "%.3f"|format(metrics.min_sp95) if metrics and metrics.min_sp95 else "N/C" }} €
+      </div>
+      <div class="text-[10px] text-slate-400 mt-0.5">
+        {{ trends.sp95.text if trends and trends.sp95 else "Stable" }}
+      </div>
+    </div>
+
+    <!-- E85 -->
+    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+      <div class="text-[11px] font-bold text-slate-400 uppercase">E85</div>
+      <div class="text-xl font-black text-slate-900 mt-1">
+        {{ "%.3f"|format(metrics.avg_e85) if metrics and metrics.avg_e85 else "N/C" }} <span class="text-xs font-normal">€</span>
+      </div>
+      <div class="text-[11px] text-emerald-600 font-semibold mt-1">
+        Min: {{ "%.3f"|format(metrics.min_e85) if metrics and metrics.min_e85 else "N/C" }} €
+      </div>
+      <div class="text-[10px] text-slate-400 mt-0.5">
+        {{ trends.e85.text if trends and trends.e85 else "Stable" }}
+      </div>
+    </div>
+
+    <!-- GPLc -->
+    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+      <div class="text-[11px] font-bold text-slate-400 uppercase">GPLc</div>
+      <div class="text-xl font-black text-slate-900 mt-1">
+        {{ "%.3f"|format(metrics.avg_gplc) if metrics and metrics.avg_gplc else "N/C" }} <span class="text-xs font-normal">€</span>
+      </div>
+      <div class="text-[11px] text-emerald-600 font-semibold mt-1">
+        Min: {{ "%.3f"|format(metrics.min_gplc) if metrics and metrics.min_gplc else "N/C" }} €
+      </div>
+      <div class="text-[10px] text-slate-400 mt-0.5">
+        {{ trends.gplc.text if trends and trends.gplc else "Stable" }}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Tableau Comparatif Détaillé des Stations -->
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8">
+    <div class="p-6 border-b border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div>
+        <h2 class="text-xl font-bold text-slate-900">Tableau Comparatif des Stations à {{ city.nom }}</h2>
+        <p class="text-xs text-slate-500 mt-1">{{ stations | length }} stations répertoriées avec tarifs actualisés.</p>
+      </div>
+      <span class="text-xs font-semibold px-2.5 py-1 rounded bg-slate-100 text-slate-700">
+        Trié par prix du Gazole croissant
+      </span>
+    </div>
+
+    {% if stations and stations | length > 0 %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm text-slate-700">
+        <thead class="bg-slate-50 text-xs uppercase font-bold text-slate-500 border-b border-slate-200">
+          <tr>
+            <th class="px-6 py-3.5">Station & Adresse</th>
+            <th class="px-4 py-3.5 text-center">Gazole</th>
+            <th class="px-4 py-3.5 text-center">SP95-E10</th>
+            <th class="px-4 py-3.5 text-center">SP98</th>
+            <th class="px-4 py-3.5 text-center">E85</th>
+            <th class="px-4 py-3.5 text-center">Services</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for st in stations %}
+          <tr class="hover:bg-slate-50 transition">
+            <td class="px-6 py-4">
+              <div class="font-bold text-slate-900">{{ st.adresse }}</div>
+              <div class="text-xs text-slate-500">{{ st.cp }} {{ st.ville }}</div>
+              {% if st.automate_24_24 %}
+              <span class="inline-block mt-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100">
+                24h/24
+              </span>
+              {% endif %}
+            </td>
+
+            <!-- Gazole -->
+            <td class="px-4 py-4 text-center">
+              {% if st.gazole %}
+                <span class="font-bold text-slate-900 block">{{ "%.3f"|format(st.gazole) }} €</span>
+                {% if metrics.min_gazole and st.gazole == metrics.min_gazole %}
+                  <span class="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">Moins cher</span>
+                {% endif %}
+              {% else %}
+                <span class="text-slate-300">-</span>
+              {% endif %}
+            </td>
+
+            <!-- E10 -->
+            <td class="px-4 py-4 text-center">
+              {% if st.e10 %}
+                <span class="font-bold text-slate-900 block">{{ "%.3f"|format(st.e10) }} €</span>
+                {% if metrics.min_e10 and st.e10 == metrics.min_e10 %}
+                  <span class="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">Moins cher</span>
+                {% endif %}
+              {% else %}
+                <span class="text-slate-300">-</span>
+              {% endif %}
+            </td>
+
+            <!-- SP98 -->
+            <td class="px-4 py-4 text-center">
+              {% if st.sp98 %}
+                <span class="font-bold text-slate-900 block">{{ "%.3f"|format(st.sp98) }} €</span>
+                {% if metrics.min_sp98 and st.sp98 == metrics.min_sp98 %}
+                  <span class="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">Moins cher</span>
+                {% endif %}
+              {% else %}
+                <span class="text-slate-300">-</span>
+              {% endif %}
+            </td>
+
+            <!-- E85 -->
+            <td class="px-4 py-4 text-center">
+              {% if st.e85 %}
+                <span class="font-bold text-slate-900 block">{{ "%.3f"|format(st.e85) }} €</span>
+                {% if metrics.min_e85 and st.e85 == metrics.min_e85 %}
+                  <span class="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">Moins cher</span>
+                {% endif %}
+              {% else %}
+                <span class="text-slate-300">-</span>
+              {% endif %}
+            </td>
+
+            <!-- Services -->
+            <td class="px-4 py-4 text-center">
+              <div class="flex flex-wrap justify-center gap-1 max-w-xs mx-auto">
+                {% for s in st.services[:3] %}
+                <span class="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded">
+                  {{ s }}
+                </span>
+                {% endfor %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="p-8 text-center text-slate-500">
+      Aucune station-service en activité recensée dans le périmètre direct de cette commune aujourd'hui.
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Synthèse Analytique & Conseils IA / Fallback -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+    <div class="lg:col-span-2 bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold text-slate-900">Analyse & Recommandations Locales</h2>
+        <span class="text-xs font-semibold px-2.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
+          ÉcoRadar Intelligence
+        </span>
+      </div>
+
+      <div class="prose prose-slate max-w-none text-sm leading-relaxed">
+        {{ summary_html | safe }}
+      </div>
+    </div>
+
+    <!-- Bloc Clés d'Économie -->
+    <div class="bg-gradient-to-br from-emerald-900 to-slate-900 text-white p-6 sm:p-8 rounded-2xl shadow-sm flex flex-col justify-between">
+      <div>
+        <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">💡 Bons Réflexes</span>
+        <h3 class="text-xl font-bold mt-2 mb-4">Optimiser ses dépenses à {{ city.nom }}</h3>
+        
+        <ul class="space-y-4 text-xs text-slate-200">
+          <li class="flex items-start space-x-2">
+            <span class="text-emerald-400 font-bold">1.</span>
+            <span>Privilégiez les stations d'hypermarchés souvent plus agressives de 3 à 7 centimes sur le litre.</span>
+          </li>
+          <li class="flex items-start space-x-2">
+            <span class="text-emerald-400 font-bold">2.</span>
+            <span>Vérifiez la pression de vos pneus : un sous-gonflage de 0.5 bar entraîne une surconsommation de 3%.</span>
+          </li>
+          <li class="flex items-start space-x-2">
+            <span class="text-emerald-400 font-bold">3.</span>
+            <span>Surveillez la couleur Tempo EDF pour charger votre véhicule électrique au coût le plus bas.</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="mt-6 pt-6 border-t border-slate-700 text-[11px] text-slate-400">
+        Relevés vérifiés par le robot EcoRadar le {{ build_date }}.
+      </div>
+    </div>
+  </div>
+
+  <!-- FAQ Dynamique Locale (Google Rich Snippets) -->
+  {% if summary and summary.faq %}
+  <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200 mb-8">
+    <h2 class="text-2xl font-bold text-slate-900 mb-6">Foire Aux Questions - Carburants à {{ city.nom }}</h2>
+    <div class="space-y-6">
+      {% for item in summary.faq %}
+      <div class="border-b border-slate-100 pb-5 last:border-0 last:pb-0">
+        <h3 class="text-base font-bold text-slate-900 mb-2 flex items-center space-x-2">
+          <span class="text-emerald-600">Q.</span>
+          <span>{{ item.question }}</span>
+        </h3>
+        <p class="text-sm text-slate-600 leading-relaxed pl-6">
+          {{ item.answer }}
+        </p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Maillage Interne SEO : Autres Villes -->
+  {% if related_cities and related_cities | length > 0 %}
+  <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+    <h3 class="text-lg font-bold text-slate-900 mb-4">Prix des carburants dans d'autres communes</h3>
+    <div class="flex flex-wrap gap-2">
+      {% for rc in related_cities %}
+      <a href="{{ base_url }}/ville/{{ rc.slug }}.html" 
+         class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-emerald-100 hover:text-emerald-800 transition">
+        {{ rc.nom }} ({{ rc.codes_postaux[0] if rc.codes_postaux else "" }})
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

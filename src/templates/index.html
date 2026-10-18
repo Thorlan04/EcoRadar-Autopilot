@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+
+{% block title %}EcoRadar | Baromètre National des Carburants & Énergie en Direct{% endblock %}
+{% block meta_description %}Comparez les prix des carburants (Gazole, SP95-E10, SP98, E85) dans toute la France et consultez la couleur Tempo EDF du jour. Données officielles actualisées.{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "EcoRadar",
+  "url": "{{ base_url }}/index.html",
+  "description": "Baromètre citoyen des prix des carburants et indicateur d'efficacité énergétique Tempo EDF en direct.",
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": "{{ base_url }}/index.html?q={search_term_string}",
+    "query-input": "required name=search_term_string"
+  }
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+  <!-- Hero Section -->
+  <div class="text-center max-w-3xl mx-auto mb-12">
+    <div class="inline-flex items-center space-x-2 bg-emerald-100 text-emerald-800 text-xs font-semibold px-3 py-1 rounded-full mb-4">
+      <span>🚀 Mise à jour automatique quotidienne</span>
+    </div>
+    <h1 class="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight">
+      Trouvez le carburant <span class="text-emerald-600">le moins cher</span> et optimisez votre énergie
+    </h1>
+    <p class="mt-4 text-base sm:text-lg text-slate-600 leading-relaxed">
+      Tableaux de bord géolocalisés en direct pour les villes françaises. Données certifiées issues des flux du Ministère de l'Économie et du réseau EDF.
+    </p>
+  </div>
+
+  <!-- Grille Baromètre National : Carburants & Tempo -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
+    
+    <!-- Widget Tempo EDF -->
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+      <div>
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-400">⚡ Réseau Électrique</span>
+          <span class="text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-600">Indice Tempo</span>
+        </div>
+        <h2 class="text-xl font-bold text-slate-900 mb-2">Couleur Tempo EDF</h2>
+        
+        <div class="mt-4 space-y-3">
+          <div class="p-4 rounded-xl border flex items-center justify-between
+            {% if tempo.couleur_today == 'BLEU' %}badge-tempo-bleu
+            {% elif tempo.couleur_today == 'BLANC' %}badge-tempo-blanc
+            {% elif tempo.couleur_today == 'ROUGE' %}badge-tempo-rouge
+            {% else %}badge-tempo-indetermine{% endif %}">
+            <div>
+              <div class="text-xs font-medium uppercase opacity-75">Aujourd'hui</div>
+              <div class="text-2xl font-black">{{ tempo.lib_today }}</div>
+            </div>
+            <div class="text-3xl">
+              {% if tempo.couleur_today == 'BLEU' %}🔵
+              {% elif tempo.couleur_today == 'BLANC' %}⚪
+              {% elif tempo.couleur_today == 'ROUGE' %}🔴
+              {% else %}⏳{% endif %}
+            </div>
+          </div>
+
+          <div class="p-3 rounded-xl border flex items-center justify-between
+            {% if tempo.couleur_tomorrow == 'BLEU' %}badge-tempo-bleu
+            {% elif tempo.couleur_tomorrow == 'BLANC' %}badge-tempo-blanc
+            {% elif tempo.couleur_tomorrow == 'ROUGE' %}badge-tempo-rouge
+            {% else %}badge-tempo-indetermine{% endif %}">
+            <div>
+              <div class="text-xs font-medium uppercase opacity-75">Demain (prévision)</div>
+              <div class="text-lg font-bold">{{ tempo.lib_tomorrow }}</div>
+            </div>
+            <div class="text-xl">
+              {% if tempo.couleur_tomorrow == 'BLEU' %}🔵
+              {% elif tempo.couleur_tomorrow == 'BLANC' %}⚪
+              {% elif tempo.couleur_tomorrow == 'ROUGE' %}🔴
+              {% else %}⏳{% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="text-xs text-slate-500 mt-4 leading-relaxed">
+        {% if tempo.couleur_today == 'BLEU' %}
+          Journée très économique pour la recharge électrique et le chauffage.
+        {% elif tempo.couleur_today == 'BLANC' %}
+          Tarif moyen : privilégiez les heures creuses (22h - 6h).
+        {% elif tempo.couleur_today == 'ROUGE' %}
+          Pointe de demande : limitez la consommation entre 6h et 22h.
+        {% else %}
+          Prévision en cours de consolidation par RTE/EDF.
+        {% endif %}
+      </p>
+    </div>
+
+    <!-- Moyennes Nationales des Carburants -->
+    <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+      <div class="flex items-center justify-between mb-4">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">⛽ Relevés Nationaux</span>
+        <span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">Direct Gouvernement</span>
+      </div>
+      <h2 class="text-xl font-bold text-slate-900 mb-4">Moyennes Nationales Relevées</h2>
+
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <!-- Gazole -->
+        <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+          <div class="text-xs font-semibold text-slate-500 mb-1">Gazole (B7/B10)</div>
+          <div class="text-2xl font-black text-slate-900">
+            {{ "%.3f"|format(national.nat_avg_gazole) if national.nat_avg_gazole else "N/C" }} <span class="text-sm font-normal text-slate-500">€/L</span>
+          </div>
+          <div class="text-xs text-emerald-600 font-medium mt-1">
+            Dès {{ "%.3f"|format(national.nat_min_gazole) if national.nat_min_gazole else "N/C" }} €
+          </div>
+        </div>
+
+        <!-- SP95-E10 -->
+        <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+          <div class="text-xs font-semibold text-slate-500 mb-1">SP95-E10</div>
+          <div class="text-2xl font-black text-slate-900">
+            {{ "%.3f"|format(national.nat_avg_e10) if national.nat_avg_e10 else "N/C" }} <span class="text-sm font-normal text-slate-500">€/L</span>
+          </div>
+          <div class="text-xs text-emerald-600 font-medium mt-1">
+            Dès {{ "%.3f"|format(national.nat_min_e10) if national.nat_min_e10 else "N/C" }} €
+          </div>
+        </div>
+
+        <!-- SP98 -->
+        <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+          <div class="text-xs font-semibold text-slate-500 mb-1">SP98</div>
+          <div class="text-2xl font-black text-slate-900">
+            {{ "%.3f"|format(national.nat_avg_sp98) if national.nat_avg_sp98 else "N/C" }} <span class="text-sm font-normal text-slate-500">€/L</span>
+          </div>
+          <div class="text-xs text-emerald-600 font-medium mt-1">
+            Dès {{ "%.3f"|format(national.nat_min_sp98) if national.nat_min_sp98 else "N/C" }} €
+          </div>
+        </div>
+
+        <!-- SP95 -->
+        <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+          <div class="text-xs font-semibold text-slate-500 mb-1">SP95 Pur</div>
+          <div class="text-2xl font-black text-slate-900">
+            {{ "%.3f"|format(national.nat_avg_sp95) if national.nat_avg_sp95 else "N/C" }} <span class="text-sm font-normal text-slate-500">€/L</span>
+          </div>
+          <div class="text-xs text-emerald-600 font-medium mt-1">
+            Dès {{ "%.3f"|format(national.nat_min_sp95) if national.nat_min_sp95 else "N/C" }} €
+          </div>
+        </div>
+
+        <!-- E85 -->
+        <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+          <div class="text-xs font-semibold text-slate-500 mb-1">Superéthanol E85</div>
+          <div class="text-2xl font-black text-slate-900">
+            {{ "%.3f"|format(national.nat_avg_e85) if national.nat_avg_e85 else "N/C" }} <span class="text-sm font-normal text-slate-500">€/L</span>
+          </div>
+          <div class="text-xs text-emerald-600 font-medium mt-1">
+            Dès {{ "%.3f"|format(national.nat_min_e85) if national.nat_min_e85 else "N/C" }} €
+          </div>
+        </div>
+
+        <!-- GPLc -->
+        <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+          <div class="text-xs font-semibold text-slate-500 mb-1">GPLc</div>
+          <div class="text-2xl font-black text-slate-900">
+            {{ "%.3f"|format(national.nat_avg_gplc) if national.nat_avg_gplc else "N/C" }} <span class="text-sm font-normal text-slate-500">€/L</span>
+          </div>
+          <div class="text-xs text-emerald-600 font-medium mt-1">
+            Dès {{ "%.3f"|format(national.nat_min_gplc) if national.nat_min_gplc else "N/C" }} €
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4 flex items-center justify-between text-xs text-slate-500 border-t border-slate-100 pt-3">
+        <span>Basé sur {{ national.total_stations or 0 }} stations actives surveillées</span>
+        <span>Mis à jour le {{ build_date }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Barre de Recherche Instantanée des Villes -->
+  <div id="annuaire" class="mb-8">
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div>
+          <h2 class="text-2xl font-bold text-slate-900">Annuaire des Villes Françaises</h2>
+          <p class="text-sm text-slate-500">Recherchez instantanément votre commune ou explorez le classement ci-dessous.</p>
+        </div>
+        <div class="w-full sm:w-72">
+          <div class="relative">
+            <input type="text" id="city-search" placeholder="Rechercher une ville, CP..." 
+                   class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+            <span class="absolute left-3 top-2.5 text-slate-400">🔍</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Grille des Villes (Recherche Dynamique en JS) -->
+  <div id="cities-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-12">
+    {% for item in cities_cards %}
+    <div class="city-card bg-white p-5 rounded-2xl shadow-sm border border-slate-200 hover:shadow-md hover:border-emerald-500 transition group flex flex-col justify-between"
+         data-name="{{ item.city.nom | lower }}"
+         data-cp="{{ item.city.codes_postaux | join(' ') }}">
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+            {{ item.city.codes_postaux[0] if item.city.codes_postaux else item.city.code_insee }}
+          </span>
+          <span class="text-xs text-slate-400">{{ "{:,}".format(item.city.population).replace(',', ' ') }} hab.</span>
+        </div>
+        <h3 class="text-lg font-bold text-slate-900 group-hover:text-emerald-600 transition">
+          <a href="{{ base_url }}/ville/{{ item.city.slug }}.html" class="focus:outline-none">
+            {{ item.city.nom }}
+          </a>
+        </h3>
+        <p class="text-xs text-slate-500 mb-3">{{ item.city.departement or "France" }}</p>
+
+        <div class="space-y-1.5 text-xs">
+          <div class="flex items-center justify-between py-1 border-b border-slate-50">
+            <span class="text-slate-500">Gazole :</span>
+            <span class="font-bold text-slate-900">
+              {{ "%.3f"|format(item.metrics.avg_gazole) if item.metrics and item.metrics.avg_gazole else "N/C" }} €
+            </span>
+          </div>
+          <div class="flex items-center justify-between py-1 border-b border-slate-50">
+            <span class="text-slate-500">SP95-E10 :</span>
+            <span class="font-bold text-slate-900">
+              {{ "%.3f"|format(item.metrics.avg_e10) if item.metrics and item.metrics.avg_e10 else "N/C" }} €
+            </span>
+          </div>
+          <div class="flex items-center justify-between py-1">
+            <span class="text-slate-500">Stations :</span>
+            <span class="font-semibold text-emerald-700">{{ item.station_count }} relevées</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+        <span class="text-emerald-600 font-semibold group-hover:underline">Voir les tarifs →</span>
+        <span class="text-slate-400 text-[10px]">Direct gouv</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div id="no-result" class="hidden text-center py-12 bg-white rounded-2xl border border-slate-200">
+    <p class="text-base text-slate-600">Aucune ville ne correspond à votre recherche.</p>
+  </div>
+
+</div>
+
+<!-- Script de filtrage instantané côté client -->
+<script>
+  const searchInput = document.getElementById('city-search');
+  const cards = document.querySelectorAll('.city-card');
+  const noResult = document.getElementById('no-result');
+
+  searchInput.addEventListener('input', (e) => {
+    const val = e.target.value.toLowerCase().trim();
+    let visibleCount = 0;
+
+    cards.forEach(card => {
+      const name = card.getAttribute('data-name');
+      const cp = card.getAttribute('data-cp');
+      if (name.includes(val) || cp.includes(val)) {
+        card.style.display = 'flex';
+        visibleCount++;
+      } else {
+        card.style.display = 'none';
+      }
+    });
+
+    if (visibleCount === 0) {
+      noResult.classList.remove('hidden');
+    } else {
+      noResult.classList.add('hidden');
+    }
+  });
+</script>
+{% endblock %}
