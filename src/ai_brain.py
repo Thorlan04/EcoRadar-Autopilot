@@ -175,11 +175,11 @@ Pour demain, la couleur prévisionnelle annoncée est **{lib_tomorrow}**.
         trends: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Génère l'analyse via Gemini 2.5 Flash si API key présente,
-        avec repli automatique sur le fallback déterministe.
+        Génère l'analyse via Gemini 2.5 Flash si API key présente et quota dispo,
+        avec repli automatique immédiat sur le fallback déterministe.
         """
-        # Si aucun client IA configuré, fallback direct
-        if not self.client:
+        # Si aucun client IA ou quota journalier déjà épuisé, fallback immédiat sans délai
+        if not self.client or getattr(self, "quota_exhausted", False):
             return self.generate_deterministic_fallback(city, metrics, stations, tempo, national_stats, trends)
 
         prompt = f"""Tu es un analyste expert en énergie et pouvoir d'achat pour le site EcoRadar.
@@ -223,7 +223,6 @@ Fournis impérativement ta réponse au format JSON strict avec la structure suiv
             )
 
             raw_text = response.text.strip()
-            # Nettoyage d'éventuels backticks markdown
             if raw_text.startswith("```json"):
                 raw_text = raw_text[7:]
             if raw_text.startswith("```"):
@@ -241,9 +240,15 @@ Fournis impérativement ta réponse au format JSON strict avec la structure suiv
                     "ai_generated": True
                 }
         except Exception as exc:
-            logger.warning(f"Appel Gemini échoué pour {city.get('nom')} ({exc}). Bascule automatique sur Fallback déterministe.")
+            err_msg = str(exc)
+            if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
+                self.quota_exhausted = True
+                logger.warning("Quota journalier Gemini Free Tier atteint. Bascule instantanée sur Fallback déterministe pour toutes les villes.")
+            else:
+                logger.warning(f"Appel Gemini échoué pour {city.get('nom')} ({exc}).")
 
         return self.generate_deterministic_fallback(city, metrics, stations, tempo, national_stats, trends)
+
 
 
 def enrich_all_cities(active_cities: List[Dict[str, Any]], config: Dict[str, Any]) -> int:

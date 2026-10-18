@@ -252,31 +252,44 @@ def fetch_fuel_for_city(city: Dict[str, Any], radius_km: int = 12) -> Tuple[Dict
     return empty_metrics, []
 
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+
 def refresh_all_fuel_data(active_cities: List[Dict[str, Any]], radius_km: int = 12) -> Dict[str, Any]:
-    """Actualise l'ensemble des données carburant pour toutes les villes actives."""
+    """Actualise l'ensemble des données carburant en parallèle pour toutes les villes actives."""
     results = {}
     success_count = 0
     total = len(active_cities)
 
-    logger.info(f"Début de l'actualisation des données carburant pour {total} villes...")
-    for idx, city in enumerate(active_cities, start=1):
-        nom = city.get("nom", "Inconnue")
-        code = city.get("code_insee") or city.get("code")
+    logger.info(f"Début de l'actualisation multithread des carburants pour {total} communes...")
+
+    def process_city(c):
+        code = c.get("code_insee") or c.get("code")
         try:
-            metrics, stations = fetch_fuel_for_city(city, radius_km=radius_km)
-            results[code] = {
-                "city": city,
-                "metrics": metrics,
-                "stations": stations
-            }
-            success_count += 1
-            logger.info(f"[{idx}/{total}] {nom} : {len(stations)} stations détectées")
+            metrics, stations = fetch_fuel_for_city(c, radius_km=radius_km)
+            return code, c, metrics, stations, None
         except Exception as e:
-            logger.error(f"[{idx}/{total}] Erreur sur {nom} : {e}")
-            log_event("CITY_FETCH_FAIL", "ERROR", f"Ville: {nom} ({code}) - {e}")
-        
-        # Courte pause de politesse pour respecter les API gouvernementales
-        time.sleep(0.15)
+            return code, c, None, None, e
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        futures = {executor.submit(process_city, c): c for c in active_cities}
+        for idx, fut in enumerate(as_completed(futures), start=1):
+            code, city, metrics, stations, err = fut.result()
+            nom = city.get("nom", "Inconnue")
+            if err is None:
+                results[code] = {
+                    "city": city,
+                    "metrics": metrics,
+                    "stations": stations
+                }
+                success_count += 1
+            else:
+                logger.error(f"Erreur sur {nom} : {err}")
+                log_event("CITY_FETCH_FAIL", "ERROR", f"Ville: {nom} ({code}) - {err}")
+
+            if idx % 25 == 0 or idx == total:
+                logger.info(f"Progression : {idx}/{total} communes traitées...")
 
     log_event("FUEL_REFRESH_ALL", "SUCCESS", f"{success_count}/{total} villes mises à jour.")
     return results
+
