@@ -321,6 +321,13 @@
     {% endif %}
   </div>
 
+  <!-- Emplacement Bannière In-Content -->
+  {% if monetization and monetization.adsterra_banner_html %}
+  <div class="mb-8 w-full flex justify-center">
+    {{ monetization.adsterra_banner_html | safe }}
+  </div>
+  {% endif %}
+
   <!-- Synthèse Analytique & Conseils IA / Fallback -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
     <div class="lg:col-span-2 bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200">

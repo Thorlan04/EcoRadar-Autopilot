@@ -7,6 +7,7 @@
   "default_search_radius_km": 12,
   "monetization": {
     "adsense_client_id": "ca-pub-6097332031875042",
+    "adsterra_banner_html": "<div class=\"my-6 flex flex-col items-center justify-center\"><span class=\"text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1\">Annonce</span><div class=\"w-full flex justify-center overflow-x-auto\"><script>atOptions = {'key' : 'e98cbb7b200b4904d1ffe907451c7646','format' : 'iframe','height' : 90,'width' : 728,'params' : {}};</script><script src=\"https://bauval.org/22/e98cbb7b200b4904d1ffe907451c7646\"></script></div></div>",
     "moneytizer_id": "MONEYTIZER-XXXXXXXX",
     "tollbit_token": "tb_live_XXXXXXXXXXXXXXXXXXXXXXXX",
     "custom_banner_html": "<div class=\"p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-center text-sm text-emerald-800 font-medium\"><span class=\"inline-block mr-2\">💡</span> Astuce ÉcoRadar : Anticipez vos pleins avant le week-end et profitez des jours Tempo Bleu pour recharger vos véhicules électriques à coût réduit.</div>"

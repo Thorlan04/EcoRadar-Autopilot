@@ -95,6 +95,10 @@
     {% if monetization and monetization.custom_banner_html %}
       {{ monetization.custom_banner_html | safe }}
     {% endif %}
+
+    {% if monetization and monetization.adsterra_banner_html %}
+      {{ monetization.adsterra_banner_html | safe }}
+    {% endif %}
   </div>
 
   <!-- Contenu Principal -->
