@@ -271,7 +271,7 @@ def refresh_all_fuel_data(active_cities: List[Dict[str, Any]], radius_km: int = 
         except Exception as e:
             return code, c, None, None, e
 
-    with ThreadPoolExecutor(max_workers=8) as executor:
+    with ThreadPoolExecutor(max_workers=12) as executor:
         futures = {executor.submit(process_city, c): c for c in active_cities}
         for idx, fut in enumerate(as_completed(futures), start=1):
             code, city, metrics, stations, err = fut.result()
