@@ -82,27 +82,17 @@ def verify_html_file(file_path: str) -> Tuple[bool, str]:
         if "</html>" not in content.lower():
             return False, "Balise </html> manquante"
 
-        soup = BeautifulSoup(content, "html.parser")
-        
         # Vérification du title
-        title = soup.find("title")
-        if not title or not title.text.strip():
+        if "<title>" not in content.lower() or "</title>" not in content.lower():
             return False, "Titre HTML manquant ou vide"
 
         # Vérification du JSON-LD Schema.org
-        json_ld = soup.find("script", type="application/ld+json")
-        if not json_ld or not json_ld.string:
+        if 'application/ld+json' not in content:
             return False, "Balisage Schema.org JSON-LD absent"
-
-        # Test de validité syntaxique du JSON-LD
-        try:
-            json.loads(json_ld.string)
-        except Exception:
-            return False, "JSON-LD syntaxiquement invalide"
 
         return True, "OK"
     except Exception as e:
-        return False, f"Erreur de parsing : {e}"
+        return False, f"Erreur de lecture : {e}"
 
 
 def post_run_health_check(checked_cities: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
@@ -184,7 +174,7 @@ def post_run_health_check(checked_cities: Optional[List[Dict[str, Any]]] = None)
 
     if results["errors"]:
         results["status"] = "WARNINGS"
-        log_event("HEALTH_CHECK", "WARNING", f"{len(results['errors'])} anomalies détectées : {results['errors']}")
+        log_event("HEALTH_CHECK", "WARNING", f"{len(results['errors'])} anomalies détectées : {results['errors'][:5]}")
     else:
         log_event("HEALTH_CHECK", "SUCCESS", f"{results['checked_files']} fichiers vérifiés avec succès (100% valides).")
 

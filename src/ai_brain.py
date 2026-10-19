@@ -19,6 +19,13 @@ from src.database import (
 logger = logging.getLogger("EcoRadar.AIBrain")
 
 
+def fmt_price(val: Optional[float], default: str = "N/C") -> str:
+    """Formate un prix en chaîne à 3 décimales de façon 100% sécurisée contre les NoneType."""
+    if val is not None and isinstance(val, (int, float)) and val > 0:
+        return f"{val:.3f}"
+    return default
+
+
 class AIBrain:
     def __init__(self, config: Dict[str, Any]):
         self.config = config
@@ -38,6 +45,7 @@ class AIBrain:
         else:
             logger.info("Aucune variable GEMINI_API_KEY détectée. Mode Fallback déterministe actif.")
 
+
     def generate_deterministic_fallback(
         self,
         city: Dict[str, Any],
@@ -49,7 +57,7 @@ class AIBrain:
     ) -> Dict[str, Any]:
         """
         Génère une synthèse analytique mathématique complète, précise et 100% fonctionnelle
-        sans appel API externe.
+        sans appel API externe, résistante à toute absence de données.
         """
         nom = city.get("nom", "cette ville")
         departement = city.get("departement") or "France"
@@ -79,14 +87,14 @@ class AIBrain:
         # Analyse vs national
         nat_gazole = national_stats.get("nat_avg_gazole")
         comparaison_nat = ""
-        if gazole_avg and nat_gazole:
+        if gazole_avg and nat_gazole and isinstance(gazole_avg, (int, float)) and isinstance(nat_gazole, (int, float)):
             diff = round(gazole_avg - nat_gazole, 3)
             if diff > 0.01:
-                comparaison_nat = f"Le gazole y est actuellement supérieur de +{abs(diff):.3f} €/L à la moyenne nationale observée ({nat_gazole:.3f} €/L)."
+                comparaison_nat = f"Le gazole y est actuellement supérieur de +{abs(diff):.3f} €/L à la moyenne nationale observée ({fmt_price(nat_gazole)} €/L)."
             elif diff < -0.01:
-                comparaison_nat = f"Le gazole y est particulièrement avantageux, affichant -{abs(diff):.3f} €/L sous la moyenne nationale ({nat_gazole:.3f} €/L)."
+                comparaison_nat = f"Le gazole y est particulièrement avantageux, affichant -{abs(diff):.3f} €/L sous la moyenne nationale ({fmt_price(nat_gazole)} €/L)."
             else:
-                comparaison_nat = f"Les tarifs du gazole y sont quasiment alignés sur la moyenne nationale ({nat_gazole:.3f} €/L)."
+                comparaison_nat = f"Les tarifs du gazole y sont quasiment alignés sur la moyenne nationale ({fmt_price(nat_gazole)} €/L)."
 
         # Tempo EDF
         lib_today = tempo.get("lib_today", "Bleu")
@@ -105,19 +113,19 @@ class AIBrain:
 
         # Construction Markdown
         st_info = ""
-        if cheapest_gazole_station:
+        if cheapest_gazole_station and gazole_min is not None:
             adr = cheapest_gazole_station.get("adresse", "")
             ville_st = cheapest_gazole_station.get("ville", nom)
-            st_info = f"La station la plus compétitive relevée pour le Gazole est située au **{adr} ({ville_st})** avec un tarif de **{gazole_min:.3f} €/L**."
+            st_info = f"La station la plus compétitive relevée pour le Gazole est située au **{adr} ({ville_st})** avec un tarif de **{fmt_price(gazole_min)} €/L**."
 
         summary_md = f"""### Analyse Locale des Prix à {nom} ({departement})
 
 Ce baromètre dynamique synthétise les relevés officiels collectés auprès de **{station_count} stations-service** réparties sur le bassin de {nom}.
 
-- **Gazole** : Prix moyen constaté à **{gazole_avg if gazole_avg else 'N/C'} €/L** (minimum : **{gazole_min if gazole_min else 'N/C'} €/L**). Tendance récente : *{gazole_trend}*.
-- **SP95-E10** : Prix moyen constaté à **{e10_avg if e10_avg else 'N/C'} €/L** (minimum : **{e10_min if e10_min else 'N/C'} €/L**). Tendance récente : *{e10_trend}*.
-- **SP98** : Prix moyen affiché à **{sp98_avg if sp98_avg else 'N/C'} €/L** (minimum : **{sp98_min if sp98_min else 'N/C'} €/L**).
-{f"- **Superéthanol E85** : Moyenne locale à **{e85_avg:.3f} €/L** pour les motorisations compatibles." if e85_avg else ""}
+- **Gazole** : Prix moyen constaté à **{fmt_price(gazole_avg)} €/L** (minimum : **{fmt_price(gazole_min)} €/L**). Tendance récente : *{gazole_trend}*.
+- **SP95-E10** : Prix moyen constaté à **{fmt_price(e10_avg)} €/L** (minimum : **{fmt_price(e10_min)} €/L**). Tendance récente : *{e10_trend}*.
+- **SP98** : Prix moyen affiché à **{fmt_price(sp98_avg)} €/L** (minimum : **{fmt_price(sp98_min)} €/L**).
+{f"- **Superéthanol E85** : Moyenne locale à **{fmt_price(e85_avg)} €/L** pour les motorisations compatibles." if e85_avg else ""}
 
 {comparaison_nat} {st_info}
 
@@ -127,21 +135,27 @@ Pour demain, la couleur prévisionnelle annoncée est **{lib_tomorrow}**.
 """
 
         # FAQ structurée JSON-LD Schema.org
+        parts = []
+        if gazole_avg:
+            parts.append(f"{fmt_price(gazole_avg)} €/L pour le Gazole")
+        if e10_avg:
+            parts.append(f"{fmt_price(e10_avg)} €/L pour le SP95-E10")
+        if sp98_avg:
+            parts.append(f"{fmt_price(sp98_avg)} €/L pour le SP98")
+        rep_moyennes = f"Les moyennes relevées sur le secteur de {nom} sont de {', '.join(parts)}." if parts else "Les données de prix sont actualisées en continu à chaque passage de nos robots."
+
         faq = [
             {
                 "question": f"Où trouver le carburant le moins cher à {nom} aujourd'hui ?",
                 "answer": (
                     f"Selon les derniers flux du Ministère de l'Économie, la station la plus économique pour le Gazole à {nom} "
                     f"se situe au {cheapest_gazole_station.get('adresse', 'centre-ville')} ({cheapest_gazole_station.get('ville', nom)}) "
-                    f"avec un litre à {gazole_min:.3f} €." if cheapest_gazole_station else f"Consultez notre tableau comparatif en direct ci-dessus répertoriant les {station_count} stations de {nom}."
+                    f"avec un litre à {fmt_price(gazole_min)} €." if (cheapest_gazole_station and gazole_min) else f"Consultez notre tableau comparatif en direct ci-dessus répertoriant les {station_count} stations de {nom}."
                 )
             },
             {
                 "question": f"Quels sont les tarifs moyens des carburants à {nom} ?",
-                "answer": (
-                    f"Les moyennes relevées sur le secteur de {nom} sont de {gazole_avg:.3f} €/L pour le Gazole, "
-                    f"{e10_avg:.3f} €/L pour le SP95-E10 et {sp98_avg:.3f} €/L pour le SP98." if (gazole_avg and e10_avg) else f"Les données de prix sont actualisées en continu à chaque passage de nos robots."
-                )
+                "answer": rep_moyennes
             },
             {
                 "question": f"Est-ce avantageux de recharger une voiture électrique aujourd'hui à {nom} ?",
@@ -153,8 +167,8 @@ Pour demain, la couleur prévisionnelle annoncée est **{lib_tomorrow}**.
         ]
 
         takeaways = [
-            f"Gazole dès {gazole_min:.3f} €/L" if gazole_min else "Prix carburants en direct",
-            f"SP95-E10 dès {e10_min:.3f} €/L" if e10_min else "Comparatif multi-stations",
+            f"Gazole dès {fmt_price(gazole_min)} €/L" if gazole_min else "Prix carburants en direct",
+            f"SP95-E10 dès {fmt_price(e10_min)} €/L" if e10_min else "Comparatif multi-stations",
             f"Énergie EDF : Jour {lib_today}"
         ]
 
@@ -241,9 +255,9 @@ Fournis impérativement ta réponse au format JSON strict avec la structure suiv
                 }
         except Exception as exc:
             err_msg = str(exc)
-            if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
+            if any(k in err_msg for k in ["429", "RESOURCE_EXHAUSTED", "400", "401", "403", "API_KEY", "quota"]):
                 self.quota_exhausted = True
-                logger.warning("Quota journalier Gemini Free Tier atteint. Bascule instantanée sur Fallback déterministe pour toutes les villes.")
+                logger.warning(f"Quota ou connectivité Gemini indisponible ({exc}). Bascule instantanée sur Fallback déterministe pour toutes les communes.")
             else:
                 logger.warning(f"Appel Gemini échoué pour {city.get('nom')} ({exc}).")
 
@@ -254,24 +268,26 @@ Fournis impérativement ta réponse au format JSON strict avec la structure suiv
 def enrich_all_cities(active_cities: List[Dict[str, Any]], config: Dict[str, Any]) -> int:
     """Enrichit toutes les villes avec l'analyse IA ou fallback et persiste dans SQLite."""
     from src.database import (
-        get_latest_fuel_snapshot, get_tempo_state, get_fuel_price_trends,
-        get_national_fuel_stats
+        get_all_latest_fuel_snapshots, get_all_fuel_price_trends,
+        get_tempo_state, get_national_fuel_stats, save_all_city_summaries, log_event
     )
 
     brain = AIBrain(config)
     tempo = get_tempo_state()
     national_stats = get_national_fuel_stats()
+    all_snapshots = get_all_latest_fuel_snapshots()
+    all_trends = get_all_fuel_price_trends()
 
-    count = 0
+    summaries_to_save = []
     total = len(active_cities)
     logger.info(f"Début de l'enrichissement IA / Déterministe pour {total} villes...")
 
     for idx, city in enumerate(active_cities, start=1):
         code_insee = city.get("code_insee") or city.get("code")
         nom = city.get("nom", "Inconnue")
-        snapshot = get_latest_fuel_snapshot(code_insee) or {}
+        snapshot = all_snapshots.get(code_insee, {})
         stations = snapshot.get("stations", [])
-        trends = get_fuel_price_trends(code_insee)
+        trends = all_trends.get(code_insee, {})
 
         analysis = brain.generate_ai_analysis(
             city=city,
@@ -282,16 +298,19 @@ def enrich_all_cities(active_cities: List[Dict[str, Any]], config: Dict[str, Any
             trends=trends
         )
 
-        save_city_summary(
-            code_insee=code_insee,
-            summary_md=analysis["summary_markdown"],
-            faq_list=analysis["faq"],
-            takeaways=analysis["takeaways"],
-            ai_generated=analysis["ai_generated"]
-        )
-        count += 1
-        source_label = "Gemini AI" if analysis["ai_generated"] else "Deterministic Fallback"
-        logger.info(f"[{idx}/{total}] Synthèse générée pour {nom} ({source_label})")
+        summaries_to_save.append({
+            "code_insee": code_insee,
+            "summary_md": analysis["summary_markdown"],
+            "faq_list": analysis["faq"],
+            "takeaways": analysis["takeaways"],
+            "ai_generated": analysis["ai_generated"]
+        })
 
-    log_event("AI_ENRICH_ALL", "SUCCESS", f"{count}/{total} synthèses générées et enregistrées.")
-    return count
+        if idx % 50 == 0 or idx == total or analysis["ai_generated"]:
+            source_label = "Gemini AI" if analysis["ai_generated"] else "Deterministic Fallback"
+            logger.info(f"[{idx}/{total}] Synthèse générée pour {nom} ({source_label})")
+
+    # Enregistrement groupé ultra-rapide en une seule transaction
+    save_all_city_summaries(summaries_to_save)
+    log_event("AI_ENRICH_ALL", "SUCCESS", f"{len(summaries_to_save)}/{total} synthèses générées et enregistrées.")
+    return len(summaries_to_save)

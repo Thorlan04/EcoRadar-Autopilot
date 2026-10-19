@@ -448,6 +448,41 @@ def save_city_summary(code_insee: str, summary_md: str, faq_list: List[Dict[str,
     execute_with_retry(_run)
 
 
+def save_all_city_summaries(summaries_list: List[Dict[str, Any]], db_path: str = DB_PATH) -> None:
+    """Insère ou met à jour en une seule transaction SQL un lot de synthèses de villes."""
+    if not summaries_list:
+        return
+    now_iso = datetime.now(timezone.utc).isoformat()
+    today_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    def _run():
+        with get_connection(db_path) as conn:
+            conn.executemany("""
+                INSERT INTO city_summaries (
+                    code_insee, date_ref, summary_markdown, faq_json, key_takeaways_json, ai_generated, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(code_insee) DO UPDATE SET
+                    date_ref = excluded.date_ref,
+                    summary_markdown = excluded.summary_markdown,
+                    faq_json = excluded.faq_json,
+                    key_takeaways_json = excluded.key_takeaways_json,
+                    ai_generated = excluded.ai_generated,
+                    updated_at = excluded.updated_at
+            """, [
+                (
+                    item["code_insee"],
+                    today_date,
+                    item["summary_md"],
+                    json.dumps(item["faq_list"], ensure_ascii=False),
+                    json.dumps(item["takeaways"], ensure_ascii=False),
+                    1 if item.get("ai_generated") else 0,
+                    now_iso
+                )
+                for item in summaries_list
+            ])
+            conn.commit()
+    execute_with_retry(_run)
+
+
 def get_city_summary(code_insee: str, db_path: str = DB_PATH) -> Optional[Dict[str, Any]]:
     def _run():
         with get_connection(db_path) as conn:

@@ -187,10 +187,10 @@ class SiteBuilder:
         self.generate_robots_txt()
 
         # 5. Génération de llms.txt
-        self.generate_llms_txt(active_cities, tempo, national_stats)
+        self.generate_llms_txt(active_cities, tempo, national_stats, all_snapshots)
 
         # 6. Génération de l'API JSON latest.json
-        self.generate_api_latest(active_cities, tempo, national_stats)
+        self.generate_api_latest(active_cities, tempo, national_stats, all_snapshots, all_summaries)
 
         # 7. Génération de ads.txt pour AdSense
         self.generate_ads_txt()
@@ -249,7 +249,7 @@ Sitemap: {self.base_url}/sitemap.xml
         with open(os.path.join(DIST_DIR, "robots.txt"), "w", encoding="utf-8") as f:
             f.write(content)
 
-    def generate_llms_txt(self, active_cities: List[Dict[str, Any]], tempo: Dict[str, Any], national: Dict[str, Any]) -> None:
+    def generate_llms_txt(self, active_cities: List[Dict[str, Any]], tempo: Dict[str, Any], national: Dict[str, Any], all_snapshots: Dict[str, Dict[str, Any]]) -> None:
         """Génère dist/llms.txt pour les LLMs et passerelles de crawl IA."""
         lines = [
             f"# EcoRadar - Baromètre Carburants & Énergie France",
@@ -270,7 +270,7 @@ Sitemap: {self.base_url}/sitemap.xml
         ]
 
         for c in active_cities:
-            snap = get_latest_fuel_snapshot(c["code_insee"]) or {}
+            snap = all_snapshots.get(c["code_insee"], {})
             lines.append(
                 f"- [{c['nom']} ({c['codes_postaux'][0] if c.get('codes_postaux') else c['code_insee']})]({self.base_url}/ville/{c['slug']}.html) : "
                 f"Gazole {snap.get('avg_gazole', 'N/C')} €/L | E10 {snap.get('avg_e10', 'N/C')} €/L | {snap.get('station_count', 0)} stations"
@@ -279,7 +279,7 @@ Sitemap: {self.base_url}/sitemap.xml
         with open(os.path.join(DIST_DIR, "llms.txt"), "w", encoding="utf-8") as f:
             f.write("\n".join(lines))
 
-    def generate_api_latest(self, active_cities: List[Dict[str, Any]], tempo: Dict[str, Any], national: Dict[str, Any]) -> None:
+    def generate_api_latest(self, active_cities: List[Dict[str, Any]], tempo: Dict[str, Any], national: Dict[str, Any], all_snapshots: Dict[str, Dict[str, Any]], all_summaries: Dict[str, Dict[str, Any]]) -> None:
         """Génère dist/api/latest.json pour les intégrations JSON statiques."""
         data = {
             "meta": {
@@ -294,8 +294,8 @@ Sitemap: {self.base_url}/sitemap.xml
         }
 
         for c in active_cities:
-            snap = get_latest_fuel_snapshot(c["code_insee"]) or {}
-            summary = get_city_summary(c["code_insee"])
+            snap = all_snapshots.get(c["code_insee"], {})
+            summary = all_summaries.get(c["code_insee"])
             data["cities"].append({
                 "nom": c["nom"],
                 "code_insee": c["code_insee"],
