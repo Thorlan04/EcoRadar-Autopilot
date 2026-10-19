@@ -9,12 +9,14 @@ import json
 import logging
 import re
 from datetime import datetime, timezone
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from jinja2 import Environment, FileSystemLoader
 
 from src.database import (
-    get_active_cities, get_latest_fuel_snapshot, get_city_summary,
-    get_tempo_state, get_national_fuel_stats, get_fuel_price_trends, log_event
+    get_active_cities, get_latest_fuel_snapshot, get_all_latest_fuel_snapshots,
+    get_city_summary, get_all_city_summaries,
+    get_tempo_state, get_national_fuel_stats,
+    get_fuel_price_trends, get_all_fuel_price_trends, log_event
 )
 
 logger = logging.getLogger("EcoRadar.Builder")
@@ -98,25 +100,30 @@ class SiteBuilder:
         os.makedirs(os.path.join(DIST_DIR, "ville"), exist_ok=True)
         os.makedirs(os.path.join(DIST_DIR, "api"), exist_ok=True)
 
-    def build_all(self) -> Dict[str, int]:
-        """Exécute la compilation intégrale du site statique."""
+    def build_all(self, cities: Optional[List[Dict[str, Any]]] = None) -> Dict[str, int]:
+        """Exécute la compilation intégrale du site statique avec données préchargées en mémoire."""
         self.prepare_directories()
-        active_cities = get_active_cities()
+        active_cities = cities if cities is not None else get_active_cities()
         tempo = get_tempo_state()
         national_stats = get_national_fuel_stats()
 
-        logger.info(f"Compilation de {len(active_cities)} pages villes...")
-        
-        # 1. Compilation des pages par ville
+        logger.info(f"Chargement en cache des données et compilation de {len(active_cities)} pages villes...")
+        all_snapshots = get_all_latest_fuel_snapshots()
+        all_summaries = get_all_city_summaries()
+        all_trends = get_all_fuel_price_trends()
+
+        template_city = self.env.get_template("city.html")
         cities_cards = []
         city_slugs = []
 
         for city in active_cities:
             code_insee = city["code_insee"]
-            snapshot = get_latest_fuel_snapshot(code_insee) or {}
+            snapshot = all_snapshots.get(code_insee, {})
             stations = snapshot.get("stations", [])
-            summary = get_city_summary(code_insee)
-            trends = get_fuel_price_trends(code_insee)
+            summary = all_summaries.get(code_insee)
+            trends = all_trends.get(code_insee, {})
+            if not trends:
+                trends = {f: {"direction": "stable", "diff": 0.0, "text": "Stable"} for f in ["gazole", "sp95", "sp98", "e10", "e85", "gplc"]}
 
             # Villes apparentées pour le maillage interne
             related = [c for c in active_cities if c["code_insee"] != code_insee][:8]
@@ -143,7 +150,6 @@ class SiteBuilder:
                 "monetization": self.config.get("monetization", {})
             }
 
-            template_city = self.env.get_template("city.html")
             html_content = template_city.render(city_context)
 
             city_file_path = os.path.join(DIST_DIR, "ville", f"{city['slug']}.html")

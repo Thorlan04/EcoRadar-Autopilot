@@ -7,7 +7,7 @@ purge des communes obsolètes et sélection progressive des nouvelles villes.
 import os
 import json
 import logging
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Optional
 from bs4 import BeautifulSoup
 
 from src.database import (
@@ -105,7 +105,7 @@ def verify_html_file(file_path: str) -> Tuple[bool, str]:
         return False, f"Erreur de parsing : {e}"
 
 
-def post_run_health_check() -> Dict[str, Any]:
+def post_run_health_check(checked_cities: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
     """
     Vérifie la qualité de tous les artéfacts produits dans dist/ :
     index.html, ville/*.html, sitemap.xml, robots.txt, llms.txt, api/latest.json.
@@ -126,9 +126,9 @@ def post_run_health_check() -> Dict[str, Any]:
     else:
         results["errors"].append(f"index.html : {msg}")
 
-    # 2. Vérification des pages villes
-    active_cities = get_active_cities()
-    for city in active_cities:
+    # 2. Vérification des pages villes traitées
+    cities_to_check = checked_cities if checked_cities is not None else get_active_cities()
+    for city in cities_to_check:
         city_path = os.path.join(DIST_DIR, "ville", f"{city['slug']}.html")
         results["checked_files"] += 1
         valid, msg = verify_html_file(city_path)
