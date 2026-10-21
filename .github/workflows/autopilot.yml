@@ -65,7 +65,7 @@ jobs:
 
 
       - name: ⚙️ Configuration GitHub Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       - name: 📤 Upload de l'artéfact du site web (dist/)
         uses: actions/upload-pages-artifact@v3
