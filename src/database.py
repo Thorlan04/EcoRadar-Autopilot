@@ -585,3 +585,29 @@ def purge_stale_cities(threshold_runs: int = 5, db_path: str = DB_PATH) -> List[
             conn.commit()
             return purged
     return execute_with_retry(_run)
+
+
+
+def cleanup_old_snapshots(keep_history_count: int = 5, db_path: str = DB_PATH) -> None:
+    """Nettoie les anciens snapshots pour maintenir state.db sous la limite de 50 Mo de GitHub."""
+    def _run():
+        with get_connection(db_path) as conn:
+            # 1. Nullifier raw_data_json pour les snapshots non récents (libère 80% du volume)
+            conn.execute("""
+                UPDATE fuel_snapshots 
+                SET raw_data_json = NULL 
+                WHERE id NOT IN (SELECT MAX(id) FROM fuel_snapshots GROUP BY code_insee)
+                  AND raw_data_json IS NOT NULL
+            """)
+            # 2. Supprimer les snapshots plus anciens que keep_history_count par ville
+            conn.execute("""
+                DELETE FROM fuel_snapshots 
+                WHERE id IN (
+                    SELECT id FROM (
+                        SELECT id, ROW_NUMBER() OVER (PARTITION BY code_insee ORDER BY id DESC) as rn
+                        FROM fuel_snapshots
+                    ) WHERE rn > ?
+                )
+            """, (keep_history_count,))
+            conn.commit()
+    execute_with_retry(_run)

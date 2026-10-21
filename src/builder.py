@@ -8,6 +8,7 @@ import os
 import json
 import logging
 import re
+import html
 from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 from jinja2 import Environment, FileSystemLoader
@@ -27,7 +28,7 @@ TEMPLATES_DIR = os.path.join(ROOT_DIR, "src", "templates")
 
 
 def simple_markdown_to_html(md_text: str) -> str:
-    """Convertit un Markdown basique en HTML propre sans dépendance lourde."""
+    """Convertit un Markdown basique en HTML propre et sécurisé (XSS sanitization)."""
     lines = md_text.splitlines()
     html_lines = []
     in_list = False
@@ -45,14 +46,14 @@ def simple_markdown_to_html(md_text: str) -> str:
             if in_list:
                 html_lines.append("</ul>")
                 in_list = False
-            title = line_str[5:].strip()
+            title = html.escape(line_str[5:].strip())
             html_lines.append(f'<h4 class="text-base font-bold text-slate-900 mt-4 mb-2">{title}</h4>')
             continue
         elif line_str.startswith("### "):
             if in_list:
                 html_lines.append("</ul>")
                 in_list = False
-            title = line_str[4:].strip()
+            title = html.escape(line_str[4:].strip())
             html_lines.append(f'<h3 class="text-lg font-bold text-slate-900 mt-5 mb-2">{title}</h3>')
             continue
 
@@ -61,7 +62,7 @@ def simple_markdown_to_html(md_text: str) -> str:
             if not in_list:
                 html_lines.append('<ul class="list-disc pl-5 space-y-1 my-3 text-slate-700">')
                 in_list = True
-            content = line_str[2:].strip()
+            content = html.escape(line_str[2:].strip())
             # Gras
             content = re.sub(r"\*\*(.+?)\*\*", r'<strong class="text-slate-900 font-bold">\1</strong>', content)
             # Italique
@@ -74,7 +75,8 @@ def simple_markdown_to_html(md_text: str) -> str:
                 in_list = False
 
         # Paragraphe normal avec mise en forme
-        content = re.sub(r"\*\*(.+?)\*\*", r'<strong class="text-slate-900 font-bold">\1</strong>', line_str)
+        escaped_str = html.escape(line_str)
+        content = re.sub(r"\*\*(.+?)\*\*", r'<strong class="text-slate-900 font-bold">\1</strong>', escaped_str)
         content = re.sub(r"\*(.+?)\*", r'<em>\1</em>', content)
         html_lines.append(f'<p class="mb-3 text-slate-600 leading-relaxed">{content}</p>')
 

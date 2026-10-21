@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup
 
 from src.database import (
     init_db, get_city_count, get_all_known_insee_codes,
-    upsert_city, purge_stale_cities, log_event, get_active_cities
+    upsert_city, purge_stale_cities, cleanup_old_snapshots, log_event, get_active_cities
 )
 from src.fetcher import fetch_top_french_cities
 
@@ -30,6 +30,7 @@ def pre_run_heal(config: Dict[str, Any]) -> Tuple[int, List[str]]:
        pour assurer une croissance organique (Programmatic SEO).
     """
     init_db()
+    cleanup_old_snapshots(keep_history_count=5)
     
     # Purge des villes récurrentes sans stations
     purged = purge_stale_cities(threshold_runs=5)
