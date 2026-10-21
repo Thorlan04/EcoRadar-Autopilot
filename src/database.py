@@ -589,10 +589,10 @@ def purge_stale_cities(threshold_runs: int = 5, db_path: str = DB_PATH) -> List[
 
 
 def cleanup_old_snapshots(keep_history_count: int = 5, db_path: str = DB_PATH) -> None:
-    """Nettoie les anciens snapshots pour maintenir state.db sous la limite de 50 Mo de GitHub."""
+    """Nettoie les anciens snapshots et compacte la base pour maintenir state.db sous 30 Mo."""
     def _run():
         with get_connection(db_path) as conn:
-            # 1. Nullifier raw_data_json pour les snapshots non récents (libère 80% du volume)
+            # 1. Nullifier raw_data_json pour les snapshots non recents
             conn.execute("""
                 UPDATE fuel_snapshots 
                 SET raw_data_json = NULL 
@@ -611,3 +611,11 @@ def cleanup_old_snapshots(keep_history_count: int = 5, db_path: str = DB_PATH) -
             """, (keep_history_count,))
             conn.commit()
     execute_with_retry(_run)
+
+    # 3. VACUUM pour recuperer l espace disque physique (hors transaction)
+    try:
+        conn = sqlite3.connect(db_path, isolation_level=None)
+        conn.execute("VACUUM")
+        conn.close()
+    except Exception as e:
+        logger.warning(f"Impossible d executer VACUUM: {e}")
